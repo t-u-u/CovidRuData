@@ -1,4 +1,3 @@
-import xml.etree.ElementTree as ET1
 from lxml import etree as ET
 import logging
 import time
@@ -9,6 +8,7 @@ logger = logging.getLogger('CovidRuData.yandex_map')
 
 def parse_yandex_date(subtitle: str):
     """
+    Takes date from yandex map subtitle, and convert it to datetime.
     :param subtitle: "22 марта 2020, 16:27 (по московскому времени)↵источники: Роспотребнадзор, WHO, US CDC, China NHC, ECDC, DXY"
     :return: '22.03.2020 16:27': datetime
     """
@@ -39,36 +39,47 @@ def parse_yandex_date(subtitle: str):
     return res_date
 
 
-def parse_yandex_item():
-    pass
-
-
 def parse_yandex_covid(data):
+    """
+    Get data about number of covid cases per Russian region from yandex covid map
+    :param data:
+    :return:
+    """
     date_xpath = '//div[@class="covid-panel-view__subtitle"]'
     data_xpath = '//div[@class="covid-panel-view__item"]'
+    stat_xpath = '//div[@class="covid-panel-view__stat-item-value"]'
+    names_xpath = '//div[@class="covid-panel-view__item-name"]'
+    cases_xpath = '//div[@class="covid-panel-view__item-cases"]'
     res = {}
 
     try:
         parser = ET.HTMLParser()
         tree = ET.XML(data, parser)
         ya_date = parse_yandex_date(tree.xpath(date_xpath)[0].text)
+        res.update({'Дата': time.strftime('%d-%m-%Y', ya_date)})
         res.update({'Дата обновления': time.strftime('%d-%m-%Y %H:%M', ya_date)})
+        stats = tree.xpath(stat_xpath)
+        res.update({'Заражений за всё время': stats[0].text})
+        res.update({'Заражений за все время, РПН': ''})
+        res.update({'Заражений за последние сутки': stats[1].text})
+        res.update({'Выздоровлений': stats[2].text})
+        res.update({'Смертей': stats[3].text})
+        res.update({'Под медицинским наблюдением': ''})
+        res.update({'Под контролем': ''})
+        res.update({'Тестов сделано': ''})
 
-        # ya_items = tree.xpath(data_xpath)
-        # for item in ya_items:
-        #     name = item.xpath('//div[@class="covid-panel-view__item-name"]')[0].text
-        #     cases = item.xpath('//div[@class="covid-panel-view__item-cases"]')[0].text
-        #     res.update({name: cases})
-
-        names = tree.xpath('//div[@class="covid-panel-view__item-name"]')
-        cases = tree.xpath('//div[@class="covid-panel-view__item-cases"]')
-
+        names = tree.xpath(names_xpath)
+        cases = tree.xpath(cases_xpath)
+        cases_total = 0
         if len(names) != len(cases):
             raise ValueError("Parsing error: number of names isn't equal to the number of cases")
-
         for i in range(len(names)):
             res.update({names[i].text: cases[i].text})
-
+            cases_total = cases_total + int(cases[i].text)
+        res.update({'Сумма по регионам': cases_total})
+        if cases_total != int(res['Заражений за всё время']):
+            logger.warning('{2}: Сумма по регионам ({0}) отличается от статистики заражений за все время ({1})'.format(cases_total, res['Заражений за всё время'], res['Дата']))
+            res.update({'Сумма по регионам отличается от статистики заражений за все время': 'true'})
 
     except Exception as e:
         logger.exception(e.reason)
