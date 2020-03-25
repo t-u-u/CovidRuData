@@ -3,9 +3,44 @@ import datetime
 import urllib.request, urllib.error
 import os
 import csv
+import time
 
 
 logger = logging.getLogger('CovidRuData.tools')
+
+
+rus_months = {'января': '01',
+              'февраля': '02',
+              'марта': '03',
+              'апреля': '04',
+              'мая': '05',
+              'июня': '06',
+              'июля': '07',
+              'августа': '08',
+              'сентября': '09',
+              'октября': '10',
+              'ноября': '11',
+              'декабря': '12',
+              }
+
+
+def date_from_rus_text(date_str, format):
+    """
+    Get date in russian string format, like "25 марта 2020" and convert to datetime
+    :param date_str: 25 марта 2020
+    :return: 25.03.2020
+    """
+    for k, v in rus_months.items():
+        if k in date_str:
+            date_str = date_str.replace(k, v)
+    logger.debug(date_str)
+    try:
+        res_date = time.strptime(date_str, format)
+    except Exception as e:
+        logger.exception(e)
+        raise e
+    return res_date
+
 
 
 def get_webpage(url):

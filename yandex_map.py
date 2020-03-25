@@ -1,6 +1,7 @@
 from lxml import etree as ET
 import logging
 import time
+from tools import date_from_rus_text
 
 
 logger = logging.getLogger('CovidRuData.yandex_map')
@@ -12,30 +13,9 @@ def parse_yandex_date(subtitle: str):
     :param subtitle: "22 марта 2020, 16:27 (по московскому времени)↵источники: Роспотребнадзор, WHO, US CDC, China NHC, ECDC, DXY"
     :return: '22.03.2020 16:27': datetime
     """
-    rus_months = {'января': '01',
-                  'февраля': '02',
-                  'марта': '03',
-                  'апреля': '04',
-                  'мая': '05',
-                  'июня': '06',
-                  'июля': '07',
-                  'августа': '08',
-                  'сентября': '09',
-                  'октября': '10',
-                  'ноября': '11',
-                  'декабря': '12',
-                  }
     logger.info('Parsing subtitle: "{0}"'.format(subtitle))
     date_str = subtitle.split('(')[0].strip()
-    for k, v in rus_months.items():
-        if k in date_str:
-            date_str = date_str.replace(k, v)
-    logger.debug(date_str)
-    try:
-        res_date = time.strptime(date_str, '%d %m %Y, %H:%M')
-    except Exception as e:
-        logger.exception(e.read())
-        raise e
+    res_date = date_from_rus_text(date_str, '%d %m %Y, %H:%M')
     return res_date
 
 
