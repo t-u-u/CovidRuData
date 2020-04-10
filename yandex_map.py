@@ -39,11 +39,11 @@ def parse_yandex_covid(data):
         res.update({'Дата': time.strftime('%d-%m-%Y', ya_date)})
         res.update({'Дата обновления': time.strftime('%d-%m-%Y %H:%M', ya_date)})
         stats = tree.xpath(stat_xpath)
-        res.update({'Заражений за всё время': stats[0].text})
+        res.update({'Заражений за всё время': stats[0].text.replace('\xa0', '')})
         res.update({'Заражений за все время, РПН': ''})
-        res.update({'Заражений за последние сутки': stats[1].text})
-        res.update({'Выздоровлений': stats[2].text})
-        res.update({'Смертей': stats[3].text})
+        res.update({'Заражений за последние сутки': stats[1].text.replace('\xa0', '')})
+        res.update({'Выздоровлений': stats[2].text.replace('\xa0', '')})
+        res.update({'Смертей': stats[3].text.replace('\xa0', '')})
         res.update({'Под медицинским наблюдением': ''})
         res.update({'Под контролем': ''})
         res.update({'Тестов сделано': ''})
@@ -51,12 +51,15 @@ def parse_yandex_covid(data):
         names = tree.xpath(names_xpath)
         cases = tree.xpath(cases_xpath)
         cases_total = 0
+        regions = {}
         if len(names) != len(cases):
             raise ValueError("Parsing error: number of names isn't equal to the number of cases")
         for i in range(len(names)):
-            res.update({names[i].text: cases[i].text})
-            cases_total = cases_total + int(cases[i].text)
+            regions.update({names[i].text: cases[i].text.replace('\xa0', '')})
+            cases_total = cases_total + int(cases[i].text.replace('\xa0', ''))
+        res.update({key: regions[key] for key in sorted(regions)})
         res.update({'Сумма по регионам': cases_total})
+        res.update({'Сумма по регионам отличается от статистики заражений за все время': ''})
         if cases_total != int(res['Заражений за всё время']):
             logger.warning('{2}: Сумма по регионам ({0}) отличается от статистики заражений за все время ({1})'.format(cases_total, res['Заражений за всё время'], res['Дата']))
             res.update({'Сумма по регионам отличается от статистики заражений за все время': 'true'})
